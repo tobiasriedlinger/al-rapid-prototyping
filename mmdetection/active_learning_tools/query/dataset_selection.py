@@ -5,26 +5,19 @@ import random
 
 def split_random_dataset(annotation_dict, train_count=200, seed=0, labeled_ids=[]):
     image_list = annotation_dict["images"]
-    # annotation_len = len(image_list)
-    # index_range = list(range(annotation_len))
     index_range = list([ann["id"] for ann in annotation_dict["images"]])
 
     if not labeled_ids:
         random.seed(seed)
         random.shuffle(index_range)
         labeled_indices = index_range[:train_count]
-        # print("labels: ", labeled_indices)
         unlabeled_indices = index_range[train_count:]
     else:
-        # print("splitting by indices")
         labeled_indices = labeled_ids
         random.seed(seed)
         random.shuffle(index_range)
         unlabeled_indices = [x for x in index_range if x not in labeled_ids]
-    # labeled_flags = [int(i in labeled_indices) for i in range(annotation_len)]
     labeled_flags = [int(i in labeled_indices) for i in index_range]
-    # unlabeled_flags = [int(i in unlabeled_indices)
-    #                    for i in range(annotation_len)]
     unlabeled_flags = [int(i in unlabeled_indices)
                        for i in index_range]
     labeled_images = [

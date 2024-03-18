@@ -52,9 +52,6 @@ def mutual_information_query(model,
     timing_dict.update({"query_inference": float(time.time() - tic)})
 
     tic = time.time()
-    # Mutual information scores and dict with keys 
-    # ["detections", "labels", "top_boxes_post_nms", "top_probas_post_nms", 
-    # "top_scores_post_nms"]
     mutual_information, output_metrics = compute_topk_mutual_information_samples(model,
                                                    output,
                                                    model_cfg,
@@ -169,8 +166,6 @@ def compute_topk_mutual_information_samples(model,
             single_entropy = top_entropies[:, inds]
             post_probs = top_probas[:, inds, :-1]
             post_probs = post_probs / torch.sum(post_probs, dim=2, keepdim=True)
-            # probas_orig = probas_orig[:, inds, :-1]
-            # probas_orig = probas_orig / torch.sum(probas_orig, dim=2, keepdim=True)
 
             # MC mean entropy
             if torch.prod(torch.tensor(inds.shape)) > 0:

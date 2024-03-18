@@ -22,7 +22,7 @@ def prob_margin_query(model,
                       config=None,
                       timing_dict={}):
     tic = time.time()
-    output, metas = single_gpu_tensor_outputs(MMDataParallel(model, device_ids=[0]),
+    output, _ = single_gpu_tensor_outputs(MMDataParallel(model, device_ids=[0]),
                                         query_dataloader,
                                         dropout=False
                                         )
@@ -77,7 +77,6 @@ def compute_topk_prob_margin(model, output, model_cfg, cls_score_thr, pre_topk=1
             score_factors = torch.ones_like(scores)
             cls_score_thr = query_score_thr
         elif isinstance(model, TwoStageDetector):
-            # num_classes = model_cfg.roi_head.bbox_head.num_classes
             score_factors = torch.ones_like(scores)
             cls_score_thr = query_score_thr
         else:
@@ -98,19 +97,15 @@ def compute_topk_prob_margin(model, output, model_cfg, cls_score_thr, pre_topk=1
 
         if len(score_inds) > 0:
             nms_cfg = model_cfg.test_cfg.nms if "nms" in model_cfg.test_cfg else model_cfg.test_cfg.rcnn.nms
-            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),  # results[0].squeeze(),
-                                                # results[1].squeeze(),
+            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),
                                                 top_probas.squeeze(0),
                                                 cls_score_thr,
                                                 nms_cfg,
                                                 max_num=post_topk,
-                                                # results[2].squeeze(),
                                                 score_factors=score_factors,
                                                 return_inds=True
                                                 )
             top_probas = probas[:, score_inds, :]
-            # if not num_classes:
-            #     num_classes = model_cfg.bbox_head.num_classes
             inds = torch.div(inds, n_classes,
                              rounding_mode="floor").long()
             post_probs = top_probas[:, inds, :-1]

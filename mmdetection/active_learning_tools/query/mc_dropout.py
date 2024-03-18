@@ -22,16 +22,10 @@ def dropout_query(model,
                   config=None,
                   timing_dict={}):
     tic = time.time()
-    # mem_pass = True
-    # while mem_pass:
-    #     try:
     output, metas = single_gpu_tensor_outputs(MMDataParallel(model, device_ids=[0]),
                                 query_dataloader,
                                 dropout=config.splits.query.n_samples
                                 )
-        #     mem_pass = False
-        # except OSError:
-        #     time.sleep(180)
             
     timing_dict.update({"query_inference": float(time.time() - tic)})
     
@@ -46,20 +40,14 @@ def dropout_query(model,
                                                    query_score_thr=query_score_thr)
     
     class_weights = compute_class_weights(config, dropout_score)
-    # labels = []
     labels = list(output_metrics["labels"].values())
     weighted_dropout_scores = [dropout_score[i].squeeze()*class_weights[labels[i]]
                           for i in range(len(dropout_score))]
     query_score = [image_aggregation(e).item() if e.numel() > 0 else 0 for e in weighted_dropout_scores]
-    # print(query_size)
-    # print("query: ", query_score, query_score.shape)
     query_scores, query_score_ids = torch.topk(
         torch.tensor(query_score), k=query_size)
     query_img_ids = [img_ids[int(i)]
                      for i in query_score_ids.tolist()]
-    # print({"entropies": [e.tolist() for e in entropy],
-    #        "query_scores": query_score,
-    #        "queried_ids": query_img_ids})
     output_metrics.update({"dropout_score": [e.tolist() for e in dropout_score],
                            "query_scores": query_scores.tolist(),
                            "queried_ids": query_img_ids,
@@ -102,7 +90,6 @@ def compute_topk_dropout_samples(model,
     score_std_std = torch.std(score_mc_stds, dim=0, keepdim=True) + 1e-9
     
     
-    # for img_id, _ in enumerate(output):
     id_range = len(output)
     del output
 
@@ -121,23 +108,17 @@ def compute_topk_dropout_samples(model,
         top_boxes = boxes[score_inds, :].unsqueeze(0)
         top_probas = probas[score_inds, :].unsqueeze(0)
         if isinstance(model, TwoStageDetector) and len(score_inds) > 0:
-                # num_classes = model_cfg.roi_head.bbox_head.num_classes
                 top_probas = top_scores * \
                     torch.nn.functional.one_hot(
                         top_probas[:, :, -1].squeeze().long(), num_classes=n_classes+1).unsqueeze(0)
-        # else:
-        #     num_classes = model_cfg.bbox_head.num_classes
-        # print("probas:", top_probas.shape, top_probas)
 
         if len(score_inds) > 0:
             nms_cfg = model_cfg.test_cfg.nms if "nms" in model_cfg.test_cfg else model_cfg.test_cfg.rcnn.nms
-            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),  # results[0].squeeze(),
-                                                # results[1].squeeze(),
+            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),
                                                 top_probas.squeeze(0),
                                                 cls_score_thr,
                                                 nms_cfg,
                                                 max_num=post_topk,
-                                                # results[2].squeeze(),
                                                 score_factors=score_factors,
                                                 return_inds=True
                                                 )
@@ -145,8 +126,6 @@ def compute_topk_dropout_samples(model,
 
             inds = torch.div(inds, n_classes,
                              rounding_mode="floor").long()
-            # i = inds[0]
-            # idx = i // 80
             post_probs = top_probas[:, inds, :-1]
             
             boxes_std = box_mc_stds[img_id, score_inds, :].unsqueeze(0)
@@ -184,15 +163,9 @@ def compute_topk_dropout_samples(model,
             top_boxes_post_nms_dict[img_id] = []
             top_probas_post_nms_dict[img_id] = []
             top_scores_post_nms_dict[img_id] = []
-            # print(dets)
-            # print(labels)
-            # print(top_boxes)
 
     return image_wise_mc_score, {"detections": detection_dict,
                                 "labels": label_dict,
-                                # "top_boxes_pre_nms": top_boxes.tolist(),
-                                # "top_probas_pre_nms": top_probas.tolist(),
-                                # "top_scores_pre_nms": top_scores.tolist(),
                                 "top_boxes_post_nms": top_boxes_post_nms_dict,
                                 "top_probas_post_nms": top_probas_post_nms_dict,
                                 "top_scores_post_nms": top_scores_post_nms_dict,

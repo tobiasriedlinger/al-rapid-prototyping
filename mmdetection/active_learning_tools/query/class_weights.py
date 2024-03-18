@@ -12,8 +12,6 @@ def compute_class_weights(config, metrics):
         json_dict = json.load(open(json_path, "r"))
         cats = [d["id"] for d in json_dict["categories"]]
         annotations = json_dict["annotations"]
-        # print(annotations)
-        # print(len(annotations))
 
         df = pd.DataFrame(columns=list(
             annotations[0].keys()), data=annotations)
@@ -30,14 +28,5 @@ def compute_class_weights(config, metrics):
 
         return (num_instances + num_classes) / (class_counts + 1.)
 
-        # print(df["category_id"].value_counts(sort=False))
-        # print(df.describe())
-        # path_parts = json_path.split("/")
-        # dataset = path_parts[-5]
-        # method = path_parts[-4]
-        # run = int(path_parts[-3].split("run_")[-1])
-        # step = int(path_parts[-2].split("step_")[-1])
-        # save_path = osp.join(*path_parts[:-1])
-        # df.to_csv(f"/{save_path}/labeled_boxes.csv")
     else:
         return torch.ones_like(metrics)

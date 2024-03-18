@@ -11,7 +11,6 @@ from active_learning_tools.query.class_weights import compute_class_weights
 
 def entropy_query(model, 
                   query_dataloader,
-                #   output,
                   model_cfg,
                   nms_cls_score_thr=0.05,
                   pre_nms_topk=1000,
@@ -93,13 +92,11 @@ def compute_topk_entropy(model, output, model_cfg, cls_score_thr, pre_topk=1000,
 
         if len(score_inds) > 0:
             nms_cfg = model_cfg.test_cfg.nms if "nms" in model_cfg.test_cfg else model_cfg.test_cfg.rcnn.nms
-            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),  # results[0].squeeze(),
-                                                # results[1].squeeze(),
+            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),
                                                 top_probas.squeeze(0),
                                                 cls_score_thr,
                                                 nms_cfg,
                                                 max_num=post_topk,
-                                                # results[2].squeeze(),
                                                 score_factors=score_factors,
                                                 return_inds=True
                                                 )

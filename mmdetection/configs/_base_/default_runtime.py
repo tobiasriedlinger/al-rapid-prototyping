@@ -4,7 +4,7 @@ log_config = dict(
     interval=100,
     hooks=[
         dict(type='TextLoggerHook'),
-        # dict(type='TensorboardLoggerHook')
+
     ])
 # yapf:enable
 custom_hooks = [dict(type='NumClassCheckHook')]

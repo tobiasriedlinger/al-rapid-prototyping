@@ -205,7 +205,6 @@ def compute_topk_meta_detect_samples(model, output, metas, val_output, val_metas
             score_factors = torch.ones_like(scores)
             cls_score_thr = query_score_thr
         elif isinstance(model, TwoStageDetector):
-            # num_classes = model_cfg.roi_head.bbox_head.num_classes
             score_factors = torch.ones_like(scores)
             cls_score_thr = query_score_thr
         else:
@@ -229,13 +228,11 @@ def compute_topk_meta_detect_samples(model, output, metas, val_output, val_metas
 
         if len(score_inds) > 0:
             nms_cfg = model_cfg.test_cfg.nms if "nms" in model_cfg.test_cfg else model_cfg.test_cfg.rcnn.nms
-            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),  # results[0].squeeze(),
-                                                # results[1].squeeze(),
+            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),
                                                 top_probas.squeeze(0),
                                                 cls_score_thr,
                                                 nms_cfg,
                                                 max_num=post_topk,
-                                                # results[2].squeeze(),
                                                 score_factors=score_factors,
                                                 return_inds=True
                                                 )
@@ -254,8 +251,6 @@ def compute_topk_meta_detect_samples(model, output, metas, val_output, val_metas
             top_probas = probas[:, score_inds, :]
             inds = torch.div(inds, n_classes,
                              rounding_mode="floor").long()
-            # i = inds[0]
-            # idx = i // 80
             post_probs = top_probas[:, inds, :-1]
 
             labels_temp = [x for x in np.array(labels.cpu())]
@@ -271,11 +266,9 @@ def compute_topk_meta_detect_samples(model, output, metas, val_output, val_metas
 
     header_str = META_DETECT_METRICS + ['true_iou'] + ['xmin', 'ymin', 'xmax', 'ymax', 's', 'category_idx'] + [f"prob_{i}" for i in range(n_classes)] + ['file_path']
     target_path = osp.join(base_target_path, f"step_{step}/val_metrics.csv")
-    # pd.DataFrame(metrics_matrix).to_csv("/home/schubert/file_score=" + str(score_threshold) + ".csv", header=header_str)
     md_metrics_val = pd.DataFrame(metrics_matrix)
     md_metrics_val.to_csv(target_path, header=header_str)
 
-    # meta_model = xgb.XGBClassifier(tree_method="gpu_hist", gpu_id=0, use_label_encoder=False, max_depth=3, n_estimators=29, reg_alpha=1.5, reg_lambda=0.0, learning_rate=0.3)
     meta_model = xgb.XGBClassifier(tree_method="hist", use_label_encoder=False, max_depth=3, n_estimators=29, reg_alpha=1.5, reg_lambda=0.0, learning_rate=0.3)
     meta_model.fit(md_metrics_val.drop(['true_iou', 'file_path'],axis=1), md_metrics_val['true_iou'].round(0))
     
@@ -300,7 +293,6 @@ def compute_topk_meta_detect_samples(model, output, metas, val_output, val_metas
             score_factors = torch.ones_like(scores)
             cls_score_thr = query_score_thr
         elif isinstance(model, TwoStageDetector):
-            # num_classes = model_cfg.roi_head.bbox_head.num_classes
             score_factors = torch.ones_like(scores)
             cls_score_thr = query_score_thr
         else:
@@ -324,13 +316,11 @@ def compute_topk_meta_detect_samples(model, output, metas, val_output, val_metas
 
         if len(score_inds) > 0:
             nms_cfg = model_cfg.test_cfg.nms if "nms" in model_cfg.test_cfg else model_cfg.test_cfg.rcnn.nms
-            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),  # results[0].squeeze(),
-                                                # results[1].squeeze(),
+            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),
                                                 top_probas.squeeze(0),
                                                 cls_score_thr,
                                                 nms_cfg,
                                                 max_num=post_topk,
-                                                # results[2].squeeze(),
                                                 score_factors=score_factors,
                                                 return_inds=True
                                                 )
@@ -349,8 +339,6 @@ def compute_topk_meta_detect_samples(model, output, metas, val_output, val_metas
             top_probas = probas[:, score_inds, :]
             inds = torch.div(inds, n_classes,
                              rounding_mode="floor").long()
-            # i = inds[0]
-            # idx = i // 80
             post_probs = top_probas[:, inds, :-1]
 
             labels_temp = [x for x in np.array(labels.cpu())]
@@ -369,9 +357,6 @@ def compute_topk_meta_detect_samples(model, output, metas, val_output, val_metas
             except:
                 metrics_matrix_unlabeled = metrics_single_image
             
-            # entropy = - torch.sum(post_probs * torch.log(post_probs), dim=2)
-
-            # image_wise_md_score.append(torch.tensor([pred_tp]) * entropy)
             image_wise_md_score.append(torch.tensor([pred_tp]))
             detection_dict[img_id] = dets.tolist()
             label_dict[img_id] = labels.tolist()

@@ -5,12 +5,8 @@ import torch
 import mmcv
 import numpy as np
 
-from mmcv.parallel import MMDataParallel
-
-from mmdet.apis.test import single_gpu_tensor_outputs
 from mmdet.datasets import build_dataset, build_dataloader
 from active_learning_tools.query.dataset_selection import build_annotations_from_ids, split_random_dataset
-# from dataset_selection import split_random_dataset
 
 from active_learning_tools.query.entropy import entropy_query
 from active_learning_tools.query.probability_margin import prob_margin_query
@@ -66,8 +62,6 @@ def query_data(model,
                                                       train_count=query_size,
                                                       seed=cfg.al_run.run_count)
         timing_dict.update({"query_construction": float(time.time() - tic)})
-        # for k in list(labeled.keys()):
-        #     labeled[k].extend(labeled_add[k])
         mmcv.dump({"queried_ids": labeled_add["ds_indices"]},
                       osp.join(base_target_path,
                                f"step_{step}/query_output.json"))
@@ -96,7 +90,6 @@ def query_data(model,
             if cfg.splits.query.method == "entropy":
                 query_ids, output_metrics, timing_dict = entropy_query(model,
                                                           query_dataloader,
-                                                        #   outputs,
                                                           cfg.model,
                                                           post_nms_topk=20,
                                                           image_aggregation=image_aggregations[
@@ -118,8 +111,6 @@ def query_data(model,
                                                               query_size=cfg.splits.query.size,
                                                               config=cfg,
                                                               timing_dict=timing_dict)
-                # print(query_ids)
-            # print("Extension:", labeled["ds_indices"].extend(query_ids))
             elif cfg.splits.query.method == "dropout":
                 query_ids, output_metrics, timing_dict = dropout_query(model,
                                                           query_dataloader,
@@ -147,28 +138,13 @@ def query_data(model,
             elif cfg.splits.query.method == "meta_detect":
                 val_ann_file_train = cfg.data.val["ann_file"]
                 cfg.data.val["ann_file"] = val_ann_file_orig
-                # val_dict_orig = cfg.data.val
                 cfg.data.val['pipeline'] = cfg.test_pipeline
-                # cfg.data.val['pipeline'][1] = cfg.data.train['pipeline'][1]
-                # cfg.data.val['pipeline'][-1]['transforms'][-1]['keys'] = ['img', 'gt_bboxes', 'gt_labels']
-                # cfg.data.val['pipeline'][-1]['transforms'][-2]['keys'] = ['img', 'gt_bboxes', 'gt_labels']
                 val_dataset = build_dataset(cfg.data.val)
                 val_dataloader = build_dataloader(val_dataset,
                                                 samples_per_gpu=1,
                                                 workers_per_gpu=1,
                                                 dist=False,
                                                 shuffle=False)
-                # p = iter(val_dataloader)
-                # print(next(p))
-                
-                # model.eval()
-                # val_outputs, val_metas = single_gpu_test(MMDataParallel(model, device_ids=[0]),
-                #                                 val_dataloader,
-                #                                 show=False,
-                #                                 out_dir=None,
-                #                                 show_score_thr=0.0,
-                #                                 use_dropout=False
-                #                                 )
                 query_ids, output_metrics = meta_detect_query(model,
                                                               query_dataloader,
                                                               val_dataloader,
@@ -184,12 +160,10 @@ def query_data(model,
                                                               step=step,
                                                               val_dict=cfg.data.val['ann_file'],
                                                               query_dict=query_dict['ann_file'])
-                # cfg.data.val = val_dict_orig
                 cfg.data.val["ann_file"] = val_ann_file_train
             elif cfg.splits.query.method == "log_triggers":
                 query_ids, output_metrics, timing_dict = log_triggers_query(model,
                                                           query_dataloader,
-                                                        #   outputs,
                                                           cfg.model,
                                                           post_nms_topk=20,
                                                           image_aggregation=image_aggregations[
@@ -207,7 +181,6 @@ def query_data(model,
                 cfg.model.test_cfg.rcnn["metrics"] = False
             output_metrics.update({"images": query_dataset.img_ids,
                                    "img_prefix": query_dataset.img_prefix})
-            # print(output_metrics.keys())
             mmcv.dump(output_metrics,
                       osp.join(base_target_path,
                                f"step_{step}/query_output.json"))
@@ -222,7 +195,6 @@ def query_data(model,
                                                 workers_per_gpu=1,
                                                 dist=False,
                                                 shuffle=False)
-            # cfg.model.test_cfg["metrics"] = True
             model.eval()
 
             annotation_path = osp.join(base_target_path, f"step_{step}")
@@ -238,7 +210,6 @@ def query_data(model,
                                                       labeled_ids=labeled["ds_indices"]+query_ids)
             output_metrics.update({"images": query_dataset.img_ids,
                                    "img_prefix": query_dataset.img_prefix})
-            # print(output_metrics.keys())
             mmcv.dump(output_metrics,
                       osp.join(base_target_path,
                                f"step_{step}/query_output.json"))

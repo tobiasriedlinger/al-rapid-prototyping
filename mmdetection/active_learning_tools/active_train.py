@@ -1,8 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import random
 import warnings
 
-import numpy as np
 import torch
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import (HOOKS, DistSamplerSeedHook, EpochBasedRunner,
@@ -15,7 +13,6 @@ from mmdet.datasets import (build_dataloader, build_dataset,
                             replace_ImageToTensor)
 from mmdet.utils import get_root_logger
 from active_learning_tools.trainval_hook import TrainValHook
-from active_learning_tools.al_runner import ALRunner
 
 
 def train_detector(model,
@@ -155,8 +152,6 @@ def train_detector(model,
             workers_per_gpu=cfg.data.workers_per_gpu,
             dist=distributed,
             shuffle=False)
-        # eval_cfg = cfg.get('evaluation', {})
-        # eval_cfg['by_epoch'] = cfg.runner['type'] != 'IterBasedRunner'
         eval_hook = DistEvalHook if distributed else TrainValHook
         # In this PR (https://github.com/open-mmlab/mmcv/pull/1193), the
         # priority of IterTimerHook has been modified from 'NORMAL' to 'LOW'.

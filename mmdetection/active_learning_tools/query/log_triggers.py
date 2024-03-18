@@ -11,7 +11,6 @@ from active_learning_tools.query.class_weights import compute_class_weights
 
 def log_triggers_query(model, 
                   query_dataloader,
-                #   output,
                   model_cfg,
                   nms_cls_score_thr=0.05,
                   pre_nms_topk=1000,
@@ -73,7 +72,6 @@ def compute_topk_log_triggers(model, output, model_cfg, cls_score_thr, pre_topk=
             score_factors = torch.ones_like(scores)
             cls_score_thr = query_score_thr
         elif isinstance(model, TwoStageDetector):
-            # num_classes = model_cfg.roi_head.bbox_head.num_classes
             score_factors = torch.ones_like(scores)
             cls_score_thr = query_score_thr
         else:
@@ -82,14 +80,7 @@ def compute_topk_log_triggers(model, output, model_cfg, cls_score_thr, pre_topk=
         top_scores, score_inds = torch.topk(scores.squeeze(),
                                             pre_topk
                                             )
-        # if torch.max(top_scores) >= max(
-        # model_cfg.test_cfg.conf_thr, query_score_thr):
         score_inds = score_inds[top_scores >= query_score_thr]
-        # else:
-        # score_inds = score_inds[0]  # score_inds[top_scores >=
-        # model_cfg.test_cfg.conf_thr]
-        # top_scores[top_scores >= model_cfg.test_cfg.conf_thr]
-        # print('indeices:', score_inds)
         top_scores = scores[:, score_inds]
         score_factors = score_factors[:, score_inds]
         top_boxes = boxes[:, score_inds, :]
@@ -98,29 +89,21 @@ def compute_topk_log_triggers(model, output, model_cfg, cls_score_thr, pre_topk=
             top_probas = top_scores.unsqueeze(2) * \
                 torch.nn.functional.one_hot(
                     top_probas[:, :, -1].squeeze().long(), num_classes=n_classes+1).unsqueeze(0)
-        # print("probas:", top_probas.shape, top_probas)
 
         if len(score_inds) > 0:
             nms_cfg = model_cfg.test_cfg.nms if "nms" in model_cfg.test_cfg else model_cfg.test_cfg.rcnn.nms
-            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),  # results[0].squeeze(),
-                                                # results[1].squeeze(),
+            dets, labels, inds = multiclass_nms(top_boxes.squeeze(0),
                                                 top_probas.squeeze(0),
                                                 cls_score_thr,
                                                 nms_cfg,
                                                 max_num=post_topk,
-                                                # results[2].squeeze(),
                                                 score_factors=score_factors,
                                                 return_inds=True
                                                 )
             top_probas = probas[:, score_inds, :]
-            # if not num_classes:
-            #     num_classes = model_cfg.bbox_head.num_classes
             inds = torch.div(inds, n_classes,
                              rounding_mode="floor").long()
-            # i = inds[0]
-            # idx = i // 80
             post_probs = top_probas[:, inds, :-1]
-            # print(probs.shape, probs)
             post_probs = post_probs / torch.sum(post_probs, dim=2, keepdim=True)
             if torch.prod(torch.tensor(inds.shape)) > 0:
                 log_triggers = torch.ones_like(torch.prod(torch.tensor(inds.shape)))
@@ -140,15 +123,9 @@ def compute_topk_log_triggers(model, output, model_cfg, cls_score_thr, pre_topk=
             top_boxes_post_nms_dict[img_id] = []
             top_probas_post_nms_dict[img_id] = []
             top_scores_post_nms_dict[img_id] = []
-            # print(dets)
-            # print(labels)
-            # print(top_boxes)
 
     return image_wise_log_triggers, {"detections": detection_dict,
                                 "labels": label_dict,
-                                # "top_boxes_pre_nms": top_boxes.tolist(),
-                                # "top_probas_pre_nms": top_probas.tolist(),
-                                # "top_scores_pre_nms": top_scores.tolist(),
                                 "top_boxes_post_nms": top_boxes_post_nms_dict,
                                 "top_probas_post_nms": top_probas_post_nms_dict,
                                 "top_scores_post_nms": top_scores_post_nms_dict,
